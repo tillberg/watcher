@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tillberg/util/stringset"
+	"github.com/tillberg/stringset"
 )
 
 var PathSeparator = string(filepath.Separator)
@@ -35,7 +35,7 @@ func (l *Listener) Start() error {
 	if err != nil {
 		return err
 	}
-	// Figure out whether Path is a file or a directory. We need to *watch* a directory,
+	// Figure out whether Path is a file or a directory. We need to watch the directory,
 	// even if we only want notifications for a specific file inside it.
 	dir := l.Path
 	fileInfo, err := os.Stat(l.Path)

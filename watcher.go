@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/tillberg/ansi-log"
-	"github.com/tillberg/util/stringset"
+	"github.com/tillberg/stringset"
 	"gopkg.in/fsnotify.v1"
 )
 
@@ -42,6 +42,16 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 }
 
 func listenToDir(path string, listener *Listener) error {
+	stat, err := os.Lstat(path)
+	if err != nil {
+		Log.Println("@(warn:Failed to Lstat @(cyan:%s) @(warn:in listenToDir)\n", path)
+		return err
+	}
+	if !stat.IsDir() {
+		// Log.Println("Not watching non-directory", path)
+		return nil
+	}
+
 	mutex.Lock()
 	if !watchedDirs.Has(path) {
 		watchedDirs.Add(path)
@@ -54,16 +64,6 @@ func listenToDir(path string, listener *Listener) error {
 		}
 	}
 	mutex.Unlock()
-
-	stat, err := os.Lstat(path)
-	if err != nil {
-		Log.Println("@(warn:Failed to Lstat @(cyan:%s) @(warn:in listenToDir)\n", path)
-		return err
-	}
-	if !stat.IsDir() {
-		// Log.Println("Not watching non-directory", path)
-		return nil
-	}
 
 	srcEntries, err := ioutil.ReadDir(path)
 	if err != nil {
