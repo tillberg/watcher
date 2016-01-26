@@ -59,7 +59,7 @@ func WatchExecutable(pathish string) (<-chan string, error) {
 				case p := <-notify:
 					pathsChanged.Add(p)
 					break
-				case <-time.After(200 * time.Millisecond):
+				case <-time.After(400 * time.Millisecond):
 					for _, p := range pathsChanged.All() {
 						debounced <- p
 					}
