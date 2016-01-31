@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -34,6 +35,9 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 		case err := <-watcher.Errors:
 			Log.Printf("@(error:Watcher error: %s)\n", err)
 		case ev := <-watcher.Events:
+			if strings.HasSuffix(ev.Name, ".nsynctmp") {
+				continue
+			}
 			// Log.Println("change", ev.Name, ev)
 			mutex.Lock()
 			_listeners := listeners
