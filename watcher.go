@@ -76,7 +76,7 @@ func listenToDir(path string) error {
 		err := watcher.Add(path)
 		if err != nil {
 			mutex.Unlock()
-			Log.Printf("Failed to start filesystem watcher on %s: %s", path, err)
+			Log.Printf("@(warn:Failed to start filesystem watcher on %s: %s)\n", path, err)
 			return err
 		}
 	}
@@ -132,7 +132,7 @@ func ensureWatcher() error {
 		var err error
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
-			Log.Printf("Failed to initialize gopkg.in/fsnotify.v1 watcher: %s", err)
+			Log.Printf("@(warn:Failed to initialize gopkg.in/fsnotify.v1 watcher: %s)\n", err)
 			return err
 		}
 		go listenForUpdates(watcher)
