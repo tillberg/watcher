@@ -9,7 +9,7 @@ import (
 	"github.com/tillberg/stringset"
 )
 
-func WatchPath(path string) (<-chan string, error) {
+func WatchPath(path string) (<-chan PathEvent, error) {
 	l := NewListener()
 	l.Path = path
 	err := l.Start()
@@ -56,8 +56,8 @@ func WatchExecutable(pathish string) (<-chan string, error) {
 		for {
 			if pathsChanged.Len() > 0 {
 				select {
-				case p := <-notify:
-					pathsChanged.Add(p)
+				case pe := <-notify:
+					pathsChanged.Add(pe.Path)
 					break
 				case <-time.After(400 * time.Millisecond):
 					for _, p := range pathsChanged.All() {
@@ -66,7 +66,7 @@ func WatchExecutable(pathish string) (<-chan string, error) {
 					pathsChanged.Clear()
 				}
 			} else {
-				pathsChanged.Add(<-notify)
+				pathsChanged.Add((<-notify).Path)
 			}
 		}
 	}()

@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/tillberg/ansi-log"
+
 	"gopkg.in/fsnotify.v1"
 )
 
@@ -43,7 +44,9 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 			_listeners := listeners
 			mutex.Unlock()
 			for _, l := range _listeners {
-				l.Notify(ev.Name)
+				l.Notify(PathEvent{
+					Path: ev.Name,
+				})
 			}
 			// XXX filter which newly-created directories we watch based on the Ignored and Recursive
 			// settings of existing filters
@@ -90,14 +93,7 @@ func listenToDir(path string) error {
 	mutex.Lock()
 	_listeners := listeners
 	mutex.Unlock()
-	pathNotifies := make([][]string, len(_listeners))
-	go func() {
-		for _, l := range _listeners {
-			if l.NotifyDirectoriesOnStartup {
-				l.Notify(path)
-			}
-		}
-	}()
+	pathNotifies := make([][]PathEvent, len(_listeners))
 	for _, entry := range srcEntries {
 		name := entry.Name()
 		subpath := filepath.Join(path, name)
@@ -107,7 +103,10 @@ func listenToDir(path string) error {
 				if entry.IsDir() {
 					listenToSubPath = true
 				} else if l.NotifyOnStartup {
-					pathNotifies[i] = append(pathNotifies[i], subpath)
+					pathNotifies[i] = append(pathNotifies[i], PathEvent{
+						Path:           subpath,
+						IsStartupEvent: true,
+					})
 				}
 			}
 		}
@@ -117,8 +116,14 @@ func listenToDir(path string) error {
 	}
 	go func() {
 		for i, l := range _listeners {
-			for _, p := range pathNotifies[i] {
-				l.Notify(p)
+			if l.NotifyDirectoriesOnStartup {
+				l.Notify(PathEvent{
+					Path:           path,
+					IsStartupEvent: true,
+				})
+			}
+			for _, pe := range pathNotifies[i] {
+				l.Notify(pe)
 			}
 		}
 	}()

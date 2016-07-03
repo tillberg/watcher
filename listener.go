@@ -9,10 +9,15 @@ import (
 	"github.com/tillberg/stringset"
 )
 
+type PathEvent struct {
+	Path           string
+	IsStartupEvent bool
+}
+
 var PathSeparator = string(filepath.Separator)
 
 type Listener struct {
-	NotifyChan                 chan string
+	NotifyChan                 chan PathEvent
 	IgnorePart                 *stringset.StringSet
 	IgnoreSuffix               []string
 	IgnoreSubstring            []string
@@ -23,12 +28,12 @@ type Listener struct {
 	DebounceDuration           time.Duration
 
 	pathIsFile         bool
-	debounceNotifyChan chan string
+	debounceNotifyChan chan PathEvent
 }
 
 func NewListener() *Listener {
 	return &Listener{
-		NotifyChan: make(chan string),
+		NotifyChan: make(chan PathEvent, 100),
 		Recursive:  true,
 	}
 }
@@ -51,7 +56,7 @@ func (l *Listener) Start() error {
 		dir = filepath.Dir(l.Path)
 	}
 	if l.DebounceDuration != 0 {
-		l.debounceNotifyChan = make(chan string)
+		l.debounceNotifyChan = make(chan PathEvent, 100)
 		go l.debounceNotify()
 	}
 	err = addListener(l, dir)
@@ -63,20 +68,20 @@ func (l *Listener) Start() error {
 
 func (l *Listener) debounceNotify() {
 	neverChan := make(<-chan time.Time)
-	updated := make(map[string]bool)
+	updated := make(map[PathEvent]bool)
 	for {
 		timeoutChan := neverChan
 		if len(updated) > 0 {
 			timeoutChan = time.After(l.DebounceDuration)
 		}
 		select {
-		case p := <-l.debounceNotifyChan:
-			updated[p] = true
+		case pe := <-l.debounceNotifyChan:
+			updated[pe] = true
 		case <-timeoutChan:
-			for p, _ := range updated {
-				l.NotifyChan <- p
+			for pe, _ := range updated {
+				l.NotifyChan <- pe
 			}
-			updated = make(map[string]bool)
+			updated = make(map[PathEvent]bool)
 		}
 	}
 }
@@ -114,12 +119,12 @@ func (l *Listener) IsWatched(path string) bool {
 	}
 }
 
-func (l *Listener) Notify(path string) {
-	if l.IsWatched(path) {
+func (l *Listener) Notify(pathEvent PathEvent) {
+	if l.IsWatched(pathEvent.Path) {
 		if l.DebounceDuration == 0 {
-			l.NotifyChan <- path
+			l.NotifyChan <- pathEvent
 		} else {
-			l.debounceNotifyChan <- path
+			l.debounceNotifyChan <- pathEvent
 		}
 	}
 }
