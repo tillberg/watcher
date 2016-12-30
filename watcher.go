@@ -46,6 +46,7 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 			for _, l := range _listeners {
 				l.Notify(PathEvent{
 					Path: ev.Name,
+					Op:   ev.Op,
 				})
 			}
 			// XXX filter which newly-created directories we watch based on the Ignored and Recursive

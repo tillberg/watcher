@@ -6,12 +6,15 @@ import (
 	"strings"
 	"time"
 
+	fsnotify "gopkg.in/fsnotify.v1"
+
 	"github.com/tillberg/stringset"
 )
 
 type PathEvent struct {
 	Path           string
 	IsStartupEvent bool
+	Op             fsnotify.Op
 }
 
 var PathSeparator = string(filepath.Separator)
