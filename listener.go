@@ -55,6 +55,11 @@ func (l *Listener) Start() error {
 	if l.pathIsFile {
 		dir = filepath.Dir(l.Path)
 	}
+	// Add a trailing slash to handle the case that the root folder is a symlink to a folder.
+	// We don't want to follow symlinks elsewhere, but we do want to follow them at the root.
+	if !strings.HasSuffix(dir, "/") {
+		dir += "/"
+	}
 	if l.DebounceDuration != 0 {
 		l.debounceNotifyChan = make(chan PathEvent, 100)
 		go l.debounceNotify()
