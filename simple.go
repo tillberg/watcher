@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"github.com/tillberg/stringset"
@@ -17,6 +18,27 @@ func WatchPath(path string) (<-chan PathEvent, error) {
 		return nil, err
 	}
 	return l.NotifyChan, nil
+}
+
+func WatchPaths(paths ...string) (<-chan PathEvent, error) {
+	mainChan := make(chan PathEvent)
+	subChans := make([]reflect.SelectCase, len(paths))
+	for i, path := range paths {
+		l := NewListener()
+		l.Path = path
+		err := l.Start()
+		if err != nil {
+			return nil, err
+		}
+		subChans[i] = reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(l.NotifyChan)}
+	}
+	go func() {
+		for {
+			_, value, _ := reflect.Select(subChans)
+			mainChan <- value.Interface().(PathEvent)
+		}
+	}()
+	return mainChan, nil
 }
 
 func getExePath(pathish string) (string, error) {
