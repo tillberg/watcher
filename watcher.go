@@ -39,7 +39,7 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 			if strings.HasSuffix(ev.Name, ".nsynctmp") {
 				continue
 			}
-			// Log.Println("change", ev.Name, ev)
+			// Log.Println("change", ev.Op, ev.Name)
 			mutex.Lock()
 			_listeners := listeners
 			mutex.Unlock()

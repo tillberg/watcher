@@ -11,6 +11,8 @@ import (
 	"github.com/tillberg/stringset"
 )
 
+const chanSendTimeout = 5 * time.Second
+
 type PathEvent struct {
 	Path           string
 	IsStartupEvent bool
@@ -86,7 +88,7 @@ func (l *Listener) debounceNotify() {
 		case pe := <-l.debounceNotifyChan:
 			updated[pe] = true
 		case <-timeoutChan:
-			for pe, _ := range updated {
+			for pe := range updated {
 				l.NotifyChan <- pe
 			}
 			updated = make(map[PathEvent]bool)
@@ -123,16 +125,30 @@ func (l *Listener) IsWatched(path string) bool {
 		if !strings.HasPrefix(path, l.Path) {
 			return false
 		}
-		return !matches(path, l.IgnorePart, l.IgnoreSuffix, l.IgnoreSubstring)
+		relPath, err := filepath.Rel(l.Path, path)
+		if err != nil {
+			Log.Printf("@(error:Error getting relative path from %q to %q: %v)\n", l.Path, path)
+			relPath = path
+		}
+		return !matches(relPath, l.IgnorePart, l.IgnoreSuffix, l.IgnoreSubstring)
 	}
 }
 
 func (l *Listener) Notify(pathEvent PathEvent) {
 	if l.IsWatched(pathEvent.Path) {
 		if l.DebounceDuration == 0 {
-			l.NotifyChan <- pathEvent
+			select {
+			case l.NotifyChan <- pathEvent:
+			case <-time.After(chanSendTimeout):
+				Log.Printf("@(warn:Timed out waiting to send pathEvent to NotifyChan: %s %s)\n", pathEvent.Op, pathEvent.Path)
+			}
 		} else {
-			l.debounceNotifyChan <- pathEvent
+			select {
+			case l.debounceNotifyChan <- pathEvent:
+			case <-time.After(chanSendTimeout):
+				Log.Printf("@(warn:Timed out waiting to send pathEvent to debounceNotifyChan: %s %s)\n", pathEvent.Op, pathEvent.Path)
+			}
+
 		}
 	}
 }
