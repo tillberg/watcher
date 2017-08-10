@@ -109,7 +109,16 @@ func matches(path string, parts *stringset.StringSet, suffixes, substrings []str
 			return true
 		}
 	}
-	wrappedRel := path + PathSeparator
+	wrappedRel := "^"
+	if !strings.HasPrefix(path, "/") {
+		wrappedRel += PathSeparator
+	}
+	wrappedRel += path
+	// XXX This should really only be added for directories:
+	if !strings.HasSuffix(path, "/") {
+		wrappedRel += PathSeparator
+	}
+	wrappedRel += "$"
 	for _, str := range substrings {
 		if strings.Contains(wrappedRel, str) {
 			return true
