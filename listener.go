@@ -11,8 +11,6 @@ import (
 	"github.com/tillberg/stringset"
 )
 
-const chanSendTimeout = 5 * time.Second
-
 type PathEvent struct {
 	Path           string
 	IsStartupEvent bool
@@ -146,18 +144,9 @@ func (l *Listener) IsWatched(path string) bool {
 func (l *Listener) Notify(pathEvent PathEvent) {
 	if l.IsWatched(pathEvent.Path) {
 		if l.DebounceDuration == 0 {
-			select {
-			case l.NotifyChan <- pathEvent:
-			case <-time.After(chanSendTimeout):
-				Log.Printf("@(warn:Timed out waiting to send pathEvent to NotifyChan: %s %s)\n", pathEvent.Op, pathEvent.Path)
-			}
+			l.NotifyChan <- pathEvent
 		} else {
-			select {
-			case l.debounceNotifyChan <- pathEvent:
-			case <-time.After(chanSendTimeout):
-				Log.Printf("@(warn:Timed out waiting to send pathEvent to debounceNotifyChan: %s %s)\n", pathEvent.Op, pathEvent.Path)
-			}
-
+			l.debounceNotifyChan <- pathEvent
 		}
 	}
 }
