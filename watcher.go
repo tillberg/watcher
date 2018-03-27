@@ -11,7 +11,7 @@ import (
 
 	"github.com/tillberg/alog"
 
-	"gopkg.in/fsnotify.v1"
+	"gopkg.in/fsnotify/fsnotify.v1"
 )
 
 var Log = alog.New(os.Stderr, "@(dim:[watcher]) ", 0)
@@ -138,7 +138,7 @@ func ensureWatcher() error {
 		var err error
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
-			Log.Printf("@(warn:Failed to initialize gopkg.in/fsnotify.v1 watcher: %s)\n", err)
+			Log.Printf("@(warn:Failed to initialize gopkg.in/fsnotify/fsnotify.v1 watcher: %s)\n", err)
 			return err
 		}
 		go listenForUpdates(watcher)

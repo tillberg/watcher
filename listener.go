@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	fsnotify "gopkg.in/fsnotify.v1"
+	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 
 	"github.com/tillberg/stringset"
 )
