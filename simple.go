@@ -123,16 +123,16 @@ func WatchExecutable(pathish string, alsoPoll bool) (<-chan string, error) {
 			origModTime := info.ModTime().Unix()
 			origSize := info.Size()
 			origSHA1 := calcFileSHA1(exePath)
-			Log.Printf("WatchExecutable %s initial modtime %d size %d\n", exePath, origModTime, origSize)
+			// Log.Printf("WatchExecutable %s initial modtime %d size %d\n", exePath, origModTime, origSize)
 			for {
-				time.Sleep(time.Duration(30+rand.Intn(30)) * time.Second)
+				time.Sleep(time.Duration(15+rand.Intn(5)) * time.Second)
 				info2, err := os.Stat(exePath)
 				if err != nil {
 					Log.Printf("failed to stat %s: %v\n", exePath, err)
 				} else {
 					modTime := info2.ModTime().Unix()
 					size := info2.Size()
-					Log.Printf("WatchExecutable %s modtime %d size %d\n", exePath, modTime, size)
+					// Log.Printf("WatchExecutable %s modtime %d size %d\n", exePath, modTime, size)
 					if origModTime != modTime {
 						newSHA1 := calcFileSHA1(exePath)
 						if !bytes.Equal(origSHA1, newSHA1) {
