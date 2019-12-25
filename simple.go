@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"io"
+	"log"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -13,7 +14,6 @@ import (
 
 	fsnotify "gopkg.in/fsnotify/fsnotify.v1"
 
-	"github.com/tillberg/alog"
 	"github.com/tillberg/stringset"
 )
 
@@ -57,12 +57,12 @@ func getExePath(pathish string) (string, error) {
 	}
 	path, err := exec.LookPath(pathish)
 	if err != nil {
-		Log.Printf("Failed to resolve path to %s: %v", pathish, err)
+		log.Printf("[watcher] Failed to resolve path to %s: %v", pathish, err)
 		return "", err
 	} else if !filepath.IsAbs(path) {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			Log.Printf("Failed to resolve absolute path to %s: %s", path, err)
+			log.Printf("[watcher] Failed to resolve absolute path to %s: %s", path, err)
 			return "", err
 		}
 		path = absPath
@@ -116,33 +116,31 @@ func WatchExecutable(pathish string, alsoPoll bool) (<-chan string, error) {
 		go func() {
 			info, err := os.Stat(exePath)
 			for err != nil {
-				alog.Printf("failed to stat %s: %v\n", exePath, err)
+				log.Printf("failed to stat %s: %v\n", exePath, err)
 				time.Sleep(1 * time.Minute)
 				info, err = os.Stat(exePath)
 			}
 			origModTime := info.ModTime().Unix()
 			origSize := info.Size()
 			origSHA1 := calcFileSHA1(exePath)
-			// Log.Printf("WatchExecutable %s initial modtime %d size %d\n", exePath, origModTime, origSize)
 			for {
 				time.Sleep(time.Duration(15+rand.Intn(5)) * time.Second)
 				info2, err := os.Stat(exePath)
 				if err != nil {
-					Log.Printf("failed to stat %s: %v\n", exePath, err)
+					log.Printf("[watcher] failed to stat %s: %v\n", exePath, err)
 				} else {
 					modTime := info2.ModTime().Unix()
 					size := info2.Size()
-					// Log.Printf("WatchExecutable %s modtime %d size %d\n", exePath, modTime, size)
 					if origModTime != modTime {
 						newSHA1 := calcFileSHA1(exePath)
 						if !bytes.Equal(origSHA1, newSHA1) {
-							Log.Printf("WatchExecutable %s modtime changed from %d to %d; confirmed by hash change\n", exePath, origModTime, modTime)
+							// log.Printf("[watcher] WatchExecutable %s modtime changed from %d to %d; confirmed by hash change\n", exePath, origModTime, modTime)
 							pollEvents <- struct{}{}
 							origModTime = modTime
 						}
 					}
 					if origSize != size {
-						Log.Printf("WatchExecutable %s size changed from %d to %d\n", exePath, origSize, size)
+						// log.Printf("[watcher] WatchExecutable %s size changed from %d to %d\n", exePath, origSize, size)
 						pollEvents <- struct{}{}
 						origSize = size
 					}

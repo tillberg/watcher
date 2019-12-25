@@ -1,6 +1,7 @@
 package watcher
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,16 +33,25 @@ type Listener struct {
 
 	pathIsFile         bool
 	debounceNotifyChan chan PathEvent
+	slowNotifyChan     chan PathEvent
 }
 
 func NewListener() *Listener {
 	return &Listener{
-		NotifyChan: make(chan PathEvent, 100),
+		NotifyChan: make(chan PathEvent, 20),
 		Recursive:  true,
 	}
 }
 
 func (l *Listener) Start() error {
+	if l.DebounceDuration != 0 {
+		l.debounceNotifyChan = make(chan PathEvent, 20)
+		go l.debounceNotify()
+	}
+	if l.NotifyOnStartup || l.NotifyDirectoriesOnStartup {
+		l.slowNotifyChan = make(chan PathEvent, 20)
+		go l.slowNotifyStartupEvents()
+	}
 	err := ensureWatcher()
 	if err != nil {
 		return err
@@ -63,10 +73,6 @@ func (l *Listener) Start() error {
 	if !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
-	if l.DebounceDuration != 0 {
-		l.debounceNotifyChan = make(chan PathEvent, 100)
-		go l.debounceNotify()
-	}
 	err = addListener(l, dir)
 	if err != nil {
 		return err
@@ -75,21 +81,56 @@ func (l *Listener) Start() error {
 }
 
 func (l *Listener) debounceNotify() {
-	neverChan := make(<-chan time.Time)
-	updated := make(map[PathEvent]bool)
+	updated := make(map[PathEvent]fsnotify.Op)
 	for {
-		timeoutChan := neverChan
+		var timeoutChan <-chan time.Time
 		if len(updated) > 0 {
 			timeoutChan = time.After(l.DebounceDuration)
 		}
 		select {
 		case pe := <-l.debounceNotifyChan:
-			updated[pe] = true
+			// Debounce all ops together, bit-merging ops together:
+			op := pe.Op
+			pe.Op = 0
+			updated[pe] |= op
 		case <-timeoutChan:
-			for pe := range updated {
+			for pe, op := range updated {
+				pe.Op = op
 				l.NotifyChan <- pe
 			}
-			updated = make(map[PathEvent]bool)
+			updated = make(map[PathEvent]fsnotify.Op)
+		}
+	}
+}
+
+func (l *Listener) slowNotifyStartupEvents() {
+	// NOTE this logic depends on NotifyChan being a *buffered* channel
+	var events []PathEvent
+	var forwardCheckDelay time.Duration
+	for {
+		if len(events) == 0 {
+			event := <-l.slowNotifyChan
+			events = append(events, event)
+			continue
+		}
+		if len(l.NotifyChan) <= cap(l.NotifyChan)/2 {
+			select {
+			case event := <-l.slowNotifyChan:
+				events = append(events, event)
+			case l.NotifyChan <- events[0]:
+				events = events[1:]
+				forwardCheckDelay = time.Millisecond
+			}
+			continue
+		}
+		select {
+		case event := <-l.slowNotifyChan:
+			events = append(events, event)
+		case <-time.After(forwardCheckDelay):
+			forwardCheckDelay = (3 * forwardCheckDelay) / 2
+			if forwardCheckDelay > time.Second {
+				forwardCheckDelay = time.Second
+			}
 		}
 	}
 }
@@ -134,7 +175,7 @@ func (l *Listener) IsWatched(path string) bool {
 		}
 		relPath, err := filepath.Rel(l.Path, path)
 		if err != nil {
-			Log.Printf("@(error:Error getting relative path from %q to %q: %v)\n", l.Path, path)
+			log.Printf("[watcher] @(error:Error getting relative path from %q to %q: %v)\n", l.Path, path)
 			relPath = path
 		}
 		return !matches(relPath, l.IgnorePart, l.IgnoreSuffix, l.IgnoreSubstring)
@@ -143,7 +184,9 @@ func (l *Listener) IsWatched(path string) bool {
 
 func (l *Listener) Notify(pathEvent PathEvent) {
 	if l.IsWatched(pathEvent.Path) {
-		if l.DebounceDuration == 0 {
+		if pathEvent.IsStartupEvent {
+			l.slowNotifyChan <- pathEvent
+		} else if l.DebounceDuration == 0 {
 			l.NotifyChan <- pathEvent
 		} else {
 			l.debounceNotifyChan <- pathEvent
