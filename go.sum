@@ -7,6 +7,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+github.com/tillberg/alog v0.0.0-20220512194237-a3dcc96a2d8a h1:HsAZ3DNiO+LybrK6fbKamfzT9ECKSDEKsZZnropwhIs=
+github.com/tillberg/alog v0.0.0-20220512194237-a3dcc96a2d8a/go.mod h1:1s6nkUte+oDPoBb+iEo94PyXZERmDNMK5XBUj20ANBU=
 github.com/tillberg/stringset v0.0.0-20220429204947-12df33ab1cd6 h1:9QVeacXfCTL1mS2tClma3psYYcOIYSOQn0/BD/viH/Q=
 github.com/tillberg/stringset v0.0.0-20220429204947-12df33ab1cd6/go.mod h1:fYcF9dZnzutLCGBoA9x0Umi4kqTf5PsSXTW+M4P0qaE=
 golang.org/x/sys v0.0.0-20220412211240-33da011f77ad/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

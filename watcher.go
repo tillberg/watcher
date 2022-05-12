@@ -2,12 +2,12 @@ package watcher
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/tillberg/alog"
 	"gopkg.in/fsnotify/fsnotify.v1"
 )
 
@@ -29,7 +29,7 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 	for {
 		select {
 		case err := <-watcher.Errors:
-			log.Printf("[watcher] @(error:Watcher error: %s)\n", err)
+			alog.Info("[watcher] @(error:Watcher error: %s)", err)
 		case ev := <-watcher.Events:
 			if strings.HasSuffix(ev.Name, ".nsynctmp") {
 				continue
@@ -55,7 +55,7 @@ func listenForUpdates(watcher *fsnotify.Watcher) {
 func listenToDir(path string) error {
 	stat, err := os.Lstat(path)
 	if err != nil {
-		log.Printf("[watcher] @(warn:Failed to Lstat) @(cyan:%s) @(warn:in listenToDir)\n", path)
+		alog.Info("[watcher] @(warn:Failed to Lstat) @(cyan:%s) @(warn:in listenToDir)", path)
 		return err
 	}
 	if !stat.IsDir() {
@@ -71,7 +71,7 @@ func listenToDir(path string) error {
 		err := watcher.Add(path)
 		if err != nil {
 			mutex.Unlock()
-			log.Printf("[watcher] @(warn:Failed to start filesystem watcher on %s: %s)\n", path, err)
+			alog.Info("[watcher] @(warn:Failed to start filesystem watcher on %s: %s)", path, err)
 			return err
 		}
 	}
@@ -79,7 +79,7 @@ func listenToDir(path string) error {
 
 	srcEntries, err := ioutil.ReadDir(path)
 	if err != nil {
-		log.Printf("[watcher] @(warn:Error reading directory) @(cyan:%s) @(warn:in listenToDir)\n", path)
+		alog.Info("[watcher] @(warn:Error reading directory) @(cyan:%s) @(warn:in listenToDir)", path)
 		return err
 	}
 	mutex.Lock()
@@ -129,7 +129,7 @@ func ensureWatcher() error {
 		var err error
 		watcher, err = fsnotify.NewWatcher()
 		if err != nil {
-			log.Printf("[watcher] @(warn:Failed to initialize gopkg.in/fsnotify/fsnotify.v1 watcher: %s)\n", err)
+			alog.Info("[watcher] @(warn:Failed to initialize gopkg.in/fsnotify/fsnotify.v1 watcher: %s)", err)
 			return err
 		}
 		go listenForUpdates(watcher)
